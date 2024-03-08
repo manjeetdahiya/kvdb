@@ -1,27 +1,27 @@
 import pickle
 import os, shutil
-from rbloom import Bloom
 from functools import lru_cache
 import itertools
-from hashlib import sha256
-
+import glob
 import utils
-
-def hash_func(obj):
-    h = sha256(pickle.dumps(obj)).digest()
-    return int.from_bytes(h[:16], "big") - 2**127
+from bloom_filter import BloomFilter
 
 block_cache_size = 1024
-max_memtable_size = 10_000
-max_block_size = 100
+max_memtable_size = 100_000
+max_block_size = 1_000
+bloom_filter_size = 100_000
+bloom_filter_prob = 0.01
 
 class KVStore:
     def __init__(self, path) -> None:
         self.memtable = MemTable()
         self.path = path
-        shutil.rmtree(path)
-        os.mkdir(path)
-        self.ssts = []
+        # shutil.rmtree(path)
+        if os.path.exists(path):
+            self.ssts = self.load_sst_files()
+        else:
+            os.mkdir(path)
+            self.ssts = []
 
     def get(self, k):
         rec = self.memtable.get(k)
@@ -43,10 +43,21 @@ class KVStore:
     def check_and_move_memtable_to_sst(self):
         if self.memtable.size() < max_memtable_size:
             return
-        kv_records = self.memtable.get_sorted_kv_records()
-        sst = SST(f'{self.path}/sst-{len(self.ssts)}.sst', kv_records)
-        self.ssts.append(sst)
+        self.move_memtable_to_sst()
         self.memtable = MemTable()
+        
+    def move_memtable_to_sst(self):
+        if self.memtable.size() > 0:
+            kv_records = self.memtable.get_sorted_kv_records()
+            self.ssts.append(SST.create_from_kv_records(f'{self.path}/sst-{len(self.ssts)}.sst', kv_records))
+
+    def load_sst_files(self):
+        files = glob.glob(self.path+"/sst*.sst")
+        files.sort(key=lambda f : int(f.replace('sst-', '').replace('.sst', '').replace(self.path, '').replace('/', '')))
+        return [SST.create_from_path(file) for file in files]
+    
+    def close(self):
+        self.move_memtable_to_sst()
 
 
 class MemTable:
@@ -70,11 +81,22 @@ class MemTable:
 
 
 class SST:
-    def __init__(self, path, kv_records) -> None:
+    def __init__(self, path):
         self.path = path
         self.sst_index = {'sst_blocks_index_start': 0, 'sst_blocks_index_len': 0, 'filter_start': 0, 'filter_len': 0}
-        self.write_sst(kv_records)
-        self._bf = self.get_filter()
+
+    @staticmethod
+    def create_from_kv_records(path, kv_records):
+        sst = SST(path)
+        sst.write(kv_records)
+        return sst
+
+    @staticmethod
+    def create_from_path(path):
+        sst = SST(path)
+        sst.read_meta_block()
+        sst._bf = sst.get_filter()
+        return sst
 
     def get(self, k):
         if k not in self._bf:
@@ -93,8 +115,17 @@ class SST:
         while True:
             if k < blocks_bst_index[start_idx][0]:
                 return None
-            if end_idx - start_idx <= 1 or blocks_bst_index[start_idx][0] == k:
+            if blocks_bst_index[start_idx][0] == k:
                 return blocks_bst_index[start_idx][1]
+            if blocks_bst_index[end_idx][0] == k:
+                return blocks_bst_index[end_idx][1]
+            if end_idx == start_idx:
+                return blocks_bst_index[start_idx][1]
+            if end_idx - 1 == start_idx:
+                if k < blocks_bst_index[end_idx][0]:
+                    return blocks_bst_index[start_idx][1]
+                else:
+                    return blocks_bst_index[end_idx][1]
             mid_idx = (start_idx + end_idx) // 2
             if k < blocks_bst_index[mid_idx][0]:
                 end_idx = mid_idx
@@ -109,18 +140,19 @@ class SST:
             d = f.read(pos[1])
             return pickle.loads(d)
     
-    def write_sst(self, kv_records):
-        bf = Bloom(max_memtable_size * max_block_size, 0.01, hash_func)
+    def write(self, kv_records):
+        bf = BloomFilter(max_elements=bloom_filter_size, error_rate=bloom_filter_prob)
         blocks_bst_index = []
         f = open(self.path, "wb")
         for block_kv_records in itertools.batched(kv_records, max_block_size):
             block_data = {r[0]: r for r in block_kv_records}
-            bf.update([r[0] for r in block_kv_records])
             block_start_key = block_kv_records[0][0]
             self.write_block_data(f, block_data, block_start_key, blocks_bst_index)
-
+        for rec in kv_records:
+            bf.add(rec[0])
         self.write_index_filter_and_meta_blocks(f, bf, blocks_bst_index)
         f.close()
+        self._bf = self.get_filter()
 
     def write_block_data(self, f, block_data, block_start_key, blocks_bst_index):
         d = pickle.dumps(block_data)
@@ -128,7 +160,7 @@ class SST:
         f.write(d)
 
     def write_index_filter_and_meta_blocks(self, f, bf, blocks_bst_index):
-        d = pickle.dumps(bf.save_bytes())
+        d = pickle.dumps(bf)
         self.sst_index['filter_start'] = f.tell()
         self.sst_index['filter_len'] = len(d)
         f.write(d)
@@ -153,8 +185,7 @@ class SST:
         with open(self.path, "rb") as f:
             f.seek(self.sst_index['filter_start'])
             d_filter = f.read(self.sst_index['filter_len'])
-            bf = Bloom(max_memtable_size * max_block_size, 0.01)
-            bf.load_bytes(d_filter, hash_func)
+            bf = pickle.loads(d_filter)
             return bf
 
     def get_blocks_bst_index(self):
