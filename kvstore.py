@@ -59,6 +59,38 @@ class KVStore:
     def close(self):
         self.move_memtable_to_sst()
 
+    def get_iter(self):
+        self.close()
+        return self.merge_iters([sst.get_iter() for sst in self.ssts])
+    
+    def merge_iters(self, iters):
+        all_iter_vals = [[pos, iter, next(iter)] for (pos, iter) in enumerate(iters)]
+        while True:
+            min_iter_vals = KVStore.min_multiple(all_iter_vals, key=lambda x : x[2][0])
+            if len(min_iter_vals) == 0:
+                return
+            yield_record = min_iter_vals[-1][2]
+            for (i, _, _) in min_iter_vals:
+                try:
+                    all_iter_vals[i][2] = next(all_iter_vals[i][1])
+                except StopIteration:
+                    all_iter_vals[i][2] = None
+            yield yield_record
+    
+    @staticmethod
+    def min_multiple(items, key):
+        min_items = []
+        for i in range(len(items)-1, 0, -1):
+            if items[i][2] == None:
+                continue
+            if len(min_items) == 0:
+                min_items.append(items[i])
+            elif key(min_items[-1]) > key(items[i]):
+                min_items = [items[i]]
+            elif key(min_items[-1]) == key(items[i]):
+                min_items.append(items[i])
+        return min_items
+
 
 class MemTable:
     def __init__(self) -> None:
@@ -190,3 +222,10 @@ class SST:
 
     def get_blocks_bst_index(self):
         return SST.read_block(self.path, (self.sst_index['sst_blocks_index_start'], self.sst_index['sst_blocks_index_len']))
+    
+    def get_iter(self):
+        blocks_bst_index = self.get_blocks_bst_index()
+        for (_, block_pos) in blocks_bst_index:
+            block_data = SST.read_block(self.path, block_pos)
+            for k in sorted(block_data.keys()):
+                yield block_data[k]

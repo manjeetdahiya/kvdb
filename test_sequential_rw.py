@@ -20,9 +20,14 @@ count = 1_000_000
 # count = 100
 # d.get(51)
 
-start_read = time.time()
-a = []
-for i in range(count):
-    a.append(d.get(i))
-print('read', time.time() - start_read)
-print(a[:200])
+# start_read = time.time()
+# a = []
+# for i in range(count):
+#     a.append(d.get(i))
+# print('read', time.time() - start_read)
+# print(a[:200])
+
+
+
+for i in d.get_iter():
+    print(i)
