@@ -1,6 +1,6 @@
-from kvstore import KVStore
+from src import kvstore
 
-d = KVStore(path='test')
+d = kvstore.KVStore(path='test')
 
 import time
 import random
@@ -14,7 +14,7 @@ count = 3_000_000
 # d.close()
 # print('write', time.time() - start_write)
 
-d = KVStore(path='test')
+d = kvstore.KVStore(path='test')
 
 # count = 100000
 # print(d.get(2_999_999))

@@ -1,16 +1,10 @@
-import pickle
 import os, shutil
-from functools import lru_cache
-import itertools
 import glob
-import utils
 from bloom_filter import BloomFilter
 
-block_cache_size = 1024
-max_memtable_size = 100_000
-max_block_size = 10_000
-bloom_filter_size = 1000_000
-bloom_filter_prob = 0.01
+from src.memtable import MemTable
+from src.sst import SST
+
 
 class KVStore:
     def __init__(self, path) -> None:
