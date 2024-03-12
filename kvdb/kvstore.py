@@ -1,9 +1,9 @@
 import os, shutil
 import glob
-from bloom_filter import BloomFilter
 
-from src.memtable import MemTable
-from src.sst import SST
+from kvdb.memtable import MemTable
+from kvdb.sst import SST
+from kvdb.config import *
 
 
 class KVStore:

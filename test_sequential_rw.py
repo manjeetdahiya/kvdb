@@ -1,20 +1,21 @@
-from src import kvstore
+from kvdb import kvstore
+path = 'zzztest'
 
-d = kvstore.KVStore(path='test')
+d = kvstore.KVStore(path)
 
 import time
 import random
-count = 3_000_000
-# arr = [i for i in range(count)]
-# random.shuffle(arr)
+count = 3_000
+arr = [i for i in range(count)]
+random.shuffle(arr)
 
-# start_write = time.time()
-# for i in arr:
-#     d.set(i, f'val{i}')
-# d.close()
-# print('write', time.time() - start_write)
+start_write = time.time()
+for i in arr:
+    d.set(i, f'val{i}')
+d.close()
+print('write', time.time() - start_write)
 
-d = kvstore.KVStore(path='test')
+d = kvstore.KVStore(path)
 
 # count = 100000
 # print(d.get(2_999_999))

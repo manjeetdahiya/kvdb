@@ -1,9 +1,10 @@
 import pickle
 import itertools
 from functools import lru_cache
+from bloom_filter import BloomFilter
 
-import src.utils
-from src.config import *
+from kvdb import utils
+from kvdb.config import *
 
 class SST:
     def __init__(self, path):
