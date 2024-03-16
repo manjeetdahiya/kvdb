@@ -1,5 +1,3 @@
-import glob
-
 from kvdb.memtable import MemTable
 from kvdb.sst import SST
 from kvdb.sst_levels import SSTLevels

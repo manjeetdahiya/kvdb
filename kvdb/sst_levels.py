@@ -1,4 +1,5 @@
-import os, shutil
+import glob
+import os
 
 from kvdb.sst import SST
 from kvdb.config import *
@@ -7,12 +8,11 @@ class SSTLevels:
     def __init__(self, path) -> None:
         self.path = path
         self.counter = 0
+        self.leveled_ssts = [[] for _ in range(max_depth)]
         if os.path.exists(path):
-            shutil.rmtree(path)
-            # self.load_ssts()
-        # else:
-        os.mkdir(path)
-        self.leveled_ssts = [[], [], [], [], []]
+            self.load_ssts()
+        else:
+            os.mkdir(path)
 
     def create_and_add_sst(self, kv_records_iter, y=max_depth-1):
         x = len(self.leveled_ssts[y])
@@ -38,10 +38,26 @@ class SSTLevels:
                     return rec
                 
     def get_iter(self):
-        return self.merge_iters([sst for level in self.leveled_ssts for sst in level])
+        return self.merge_iters([sst.get_iter() for level in self.leveled_ssts for sst in level])
+    
+    @staticmethod
+    def get_indices_from_filename(filename, path):
+        num_strs = filename.replace(path, '').replace('/', '').replace('sst-', '').replace('.sst', '').split('-')
+        y = int(num_strs[0])
+        x = int(num_strs[1])
+        counter = int(num_strs[2])
+        return (x, y, counter)
+
 
     def load_ssts(self):
-        assert(0)
+        filenames = glob.glob(self.path+"/sst*.sst")
+        filenames.sort(key=lambda fn : SSTLevels.get_indices_from_filename(fn, self.path))
+        for filename in filenames:
+            sst = SST.create_from_path(filename)
+            (x, y, counter) = SSTLevels.get_indices_from_filename(filename, self.path)
+            self.counter = max(self.counter, counter+1)
+            assert(x == len(self.leveled_ssts[y]))
+            self.leveled_ssts[y].append(sst)
 
     def merge_iters(self, iters):
         all_iter_vals = [[pos, iter, next(iter)] for (pos, iter) in enumerate(iters)]
