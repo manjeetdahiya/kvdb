@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+
+from kvdb import kvstore
+from tests import commonkvstore
 
 import pandas as pd
 import time
@@ -20,9 +26,10 @@ def get_df(i):
 # db = {}
 count = 0
 from commonkvstore import RDKVStore
-from kvstore import KVStore
+from kvdb import kvstore
+
 kv_store = RDKVStore('test-rdict')
-kv_store = KVStore('test-pykvstore')
+# kv_store = kvstore.KVStore('test-pykvstore')
 
 cell = h3.latlng_to_cell(10, 10, 10)
 print(cell)

@@ -1,13 +1,11 @@
 import sys
 from pathlib import Path
-# sys.path.append(str(Path(__file__).parent.parent.parent))
 sys.path.append(str(Path(__file__).parent.parent))
-# sys.path.append(str(Path(__file__).parent))
 
 
 from kvdb import kvstore
-# from tests import commonkvstore
-# import commonkvstore
+from tests import commonkvstore
+
 path = 'zzztest'
 path = 'zzztest-dd'
 
@@ -16,7 +14,7 @@ d = kvstore.KVStore(path)
 
 import time
 import random
-count = 1_000_00
+count = 1_000_000
 # count = 10_0
 arr = [i for i in range(count)]
 random.shuffle(arr)
@@ -24,8 +22,8 @@ random.shuffle(arr)
 start_write = time.time()
 for i in arr:
     d.set(i, f'val{i}')
-# d.close()
-# d.sst_levels.print_sst_contents()
+d.close()
+
 print('write', time.time() - start_write)
 # assert(0)
 # d = kvstore.KVStore(path)
@@ -42,9 +40,7 @@ for i in range(count):
     a.append(val)
     if val == None:
         print(i)
-        # d.sst_levels.print_sst_contents()
         assert(val)
-    # print(d.get(i))
 print('read', time.time() - start_read)
 
 
