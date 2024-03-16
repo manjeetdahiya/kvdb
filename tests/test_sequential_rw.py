@@ -1,5 +1,13 @@
+import sys
+from pathlib import Path
+# sys.path.append(str(Path(__file__).parent.parent.parent))
+sys.path.append(str(Path(__file__).parent.parent))
+# sys.path.append(str(Path(__file__).parent))
+
+
 from kvdb import kvstore
-from tests import commonkvstore
+# from tests import commonkvstore
+# import commonkvstore
 path = 'zzztest'
 path = 'zzztest-dd'
 
@@ -8,7 +16,7 @@ d = kvstore.KVStore(path)
 
 import time
 import random
-count = 10_000_000
+count = 1_000_00
 # count = 10_0
 arr = [i for i in range(count)]
 random.shuffle(arr)

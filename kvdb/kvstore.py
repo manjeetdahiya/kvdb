@@ -36,6 +36,9 @@ class KVStore:
             kv_records = self.memtable.get_sorted_kv_records()
             self.sst_levels.create_and_add_sst(kv_records)
     
+    def get_iter(self):
+        return self.sst_levels.get_iter()
+
     def close(self):
         self.move_memtable_to_sst()
 

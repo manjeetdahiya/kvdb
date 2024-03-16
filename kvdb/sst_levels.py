@@ -21,10 +21,6 @@ class SSTLevels:
         self.leveled_ssts[y].append(sst)
         if len(self.leveled_ssts[y]) > max_size_per_level and y != 0:
             self.compact_level_and_move_to_next_level(y)
-        # if y == 1:
-        #     print('levels:')
-        #     for level in reversed(self.leveled_ssts):
-        #         print([sst.path for sst in reversed(level)])
 
     def compact_level_and_move_to_next_level(self, y):
         assert(y != 0)
@@ -40,17 +36,20 @@ class SSTLevels:
                 rec = sst.get(k)
                 if rec: 
                     return rec
+                
+    def get_iter(self):
+        return self.merge_iters([sst for level in self.leveled_ssts for sst in level])
 
     def load_ssts(self):
         assert(0)
 
     def merge_iters(self, iters):
-        all_iter_vals = []
-        for (pos, iter) in enumerate(iters):
-            try:
-                all_iter_vals.append([pos, iter, next(iter)])
-            except StopIteration:
-                all_iter_vals.append([pos, iter, None])
+        all_iter_vals = [[pos, iter, next(iter)] for (pos, iter) in enumerate(iters)]
+        # for (pos, iter) in enumerate(iters):
+        #     try:
+        #         all_iter_vals.append([pos, iter, next(iter)])
+        #     except StopIteration:
+        #         all_iter_vals.append([pos, iter, None])
 
         while True:
             min_iter_vals = SSTLevels.min_multiple(all_iter_vals, key=lambda x : x[2][0])
