@@ -61,12 +61,6 @@ class SSTLevels:
 
     def merge_iters(self, iters):
         all_iter_vals = [[pos, iter, next(iter)] for (pos, iter) in enumerate(iters)]
-        # for (pos, iter) in enumerate(iters):
-        #     try:
-        #         all_iter_vals.append([pos, iter, next(iter)])
-        #     except StopIteration:
-        #         all_iter_vals.append([pos, iter, None])
-
         while True:
             min_iter_vals = SSTLevels.min_multiple(all_iter_vals, key=lambda x : x[2][0])
             if len(min_iter_vals) == 0:
@@ -99,9 +93,3 @@ class SSTLevels:
                 print('SST: ', sst.path)
                 for rec in sst.get_iter():
                     print(rec)
-                
-                
-    # def load_sst_files(self):
-    #     files = glob.glob(self.path+"/sst*.sst")
-    #     files.sort(key=lambda f : int(f.replace('sst-', '').replace('.sst', '').replace(self.path, '').replace('/', '')))
-    #     return [SST.create_from_path(file) for file in files]
