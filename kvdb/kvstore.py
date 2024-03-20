@@ -36,6 +36,10 @@ class KVStore:
     
     def get_iter(self):
         return self.sst_levels.get_iter()
+    
+    def clear(self):
+        self.memtable.clear()
+        self.sst_levels.clear()
 
     def close(self):
         self.move_memtable_to_sst()

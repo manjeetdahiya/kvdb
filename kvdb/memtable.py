@@ -16,3 +16,6 @@ class MemTable:
     
     def get_sorted_kv_records(self):
         return [r for _, r in sorted(self.table.items())]
+    
+    def clear(self):
+        self.table.clear()

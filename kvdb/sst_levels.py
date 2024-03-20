@@ -13,7 +13,7 @@ class SSTLevels:
             self.load_ssts()
         else:
             os.mkdir(path)
-
+    
     def create_and_add_sst(self, kv_records_iter, y=max_depth-1):
         x = len(self.leveled_ssts[y])
         sst = SST.create_from_kv_records(f'{self.path}/sst-{y}-{x}-{self.counter}.sst', kv_records_iter)
@@ -48,7 +48,6 @@ class SSTLevels:
         counter = int(num_strs[2])
         return (x, y, counter)
 
-
     def load_ssts(self):
         filenames = glob.glob(self.path+"/sst*.sst")
         filenames.sort(key=lambda fn : SSTLevels.get_indices_from_filename(fn, self.path))
@@ -65,6 +64,7 @@ class SSTLevels:
             min_iter_vals = SSTLevels.min_multiple(all_iter_vals, key=lambda x : x[2][0])
             if len(min_iter_vals) == 0:
                 return
+            # TODO: skip DEL ops
             yield_record = min_iter_vals[-1][2]
             for (i, _, _) in min_iter_vals:
                 try:
@@ -93,3 +93,9 @@ class SSTLevels:
                 print('SST: ', sst.path)
                 for rec in sst.get_iter():
                     print(rec)
+
+    def clear(self):
+        for level in self.leveled_ssts:
+            for sst in level:
+                os.remove(sst.path)
+        self.leveled_ssts = [[] for _ in range(max_depth)]
